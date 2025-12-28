@@ -41,10 +41,10 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(List.of("https://urban-burguer.vercel.app", "http://localhost:*")); // Allow
-                                                                                                                   // Vercel
-                                                                                                                   // &
-                                                                                                                   // Localhost
+        configuration.setAllowedOriginPatterns(List.of(
+                "https://urban-burguer.vercel.app",
+                "https://urban-burguer-management.vercel.app",
+                "http://localhost:*"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With", "Accept"));
         configuration.setAllowCredentials(true);
