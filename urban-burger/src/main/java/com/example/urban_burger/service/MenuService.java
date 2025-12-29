@@ -48,6 +48,8 @@ public class MenuService {
         existingItem.setIngredients(updatedItem.getIngredients());
         existingItem.setPrice(updatedItem.getPrice());
         existingItem.setImageUrl(updatedItem.getImageUrl());
+        existingItem.setCategory(updatedItem.getCategory());
+        existingItem.setFeatured(updatedItem.isFeatured());
 
         return menuItemRepository.save(existingItem);
     }
