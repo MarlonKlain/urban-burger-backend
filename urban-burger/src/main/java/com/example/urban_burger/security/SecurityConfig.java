@@ -44,6 +44,8 @@ public class SecurityConfig {
         configuration.setAllowedOriginPatterns(List.of(
                 "https://urban-burguer.vercel.app",
                 "https://urban-burguer-management.vercel.app",
+                "https://urbanburger.store",
+                "https://www.urbanburger.store",
                 "http://localhost:*"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With", "Accept"));
