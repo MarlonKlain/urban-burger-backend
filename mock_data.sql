@@ -25,3 +25,6 @@ VALUES
 ('Coca-Cola Lata', 'Lata 350ml gelada.', 6.00, 'coke.jpg', 'Bebidas', false, 1),
 ('Milkshake de Morango', 'Feito com sorvete de creme e morangos frescos.', 18.00, 'milkshake.jpg', 'Bebidas', true, 1),
 ('Suco de Laranja', 'Natural, feito na hora 500ml.', 10.00, 'oj.jpg', 'Bebidas', false, 1);
+
+-- Reset sequence to avoid collision
+SELECT setval(pg_get_serial_sequence('users', 'id'), (SELECT MAX(id) FROM users));
