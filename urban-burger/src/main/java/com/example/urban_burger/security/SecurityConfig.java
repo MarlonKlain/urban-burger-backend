@@ -33,7 +33,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/public/**").permitAll()
-                        .requestMatchers("/api/orders").permitAll() // Allow management app to fetch orders
+                        // .requestMatchers("/api/orders/**").permitAll() // REMOVED: Now requires
+                        // authentication
                         .requestMatchers("/ws/**").permitAll() // Allow WebSocket connection
                         .requestMatchers("/error").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
