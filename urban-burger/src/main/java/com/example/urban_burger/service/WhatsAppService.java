@@ -1,6 +1,5 @@
 package com.example.urban_burger.service;
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -12,89 +11,74 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Service
-@RequiredArgsConstructor
 public class WhatsAppService {
 
-    @Value("${waha.base-url}")
-    private String wahaBaseUrl;
+    private final GeminiService geminiService;
+    private final RestTemplate restTemplate;
 
-    @Value("${waha.session}")
-    private String wahaSession;
+    @Value("${waha.api.url:http://localhost:3000}")
+    private String wahaApiUrl;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    public WhatsAppService(GeminiService geminiService) {
+        this.geminiService = geminiService;
+        this.restTemplate = new RestTemplate();
+    }
 
-    public void sendStatusUpdate(String phoneNumber, String status, Long orderId) {
-        if (phoneNumber == null || phoneNumber.isEmpty()) {
-            System.out.println("No phone number provided for order " + orderId);
+    @SuppressWarnings("unchecked")
+    public void processMessage(Map<String, Object> payload) {
+        System.out.println("Processing message payload: " + payload);
+        Map<String, Object> payloadData = (Map<String, Object>) payload.get("payload");
+        if (payloadData == null) {
+            System.out.println("Payload data is null");
             return;
         }
 
-        String chatId = formatPhoneNumber(phoneNumber);
-        String message = getMessageForStatus(status, orderId);
+        String from = (String) payloadData.get("from");
+        String body = (String) payloadData.get("body");
+        System.out.println("From: " + from + ", Body: " + body);
+
+        if (from != null && body != null && !from.contains("@g.us")) { // Ignore groups
+            System.out.println("Generating AI response for: " + body);
+            // Generate AI response
+            try {
+                String aiResponse = geminiService.generateResponse(body);
+                System.out.println("AI Response: " + aiResponse);
+                sendReply(from, aiResponse);
+            } catch (Exception e) {
+                System.err.println("Error generating AI response: " + e.getMessage());
+                e.printStackTrace();
+            }
+        } else {
+            System.out.println("Ignoring message (group or null fields)");
+        }
+    }
+
+    private void sendReply(String remoteJid, String text) {
+        String url = wahaApiUrl + "/api/sendText";
+        System.out.println("Sending reply to: " + remoteJid + " with text: " + text);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("chatId", remoteJid);
+        requestBody.put("text", text);
+        requestBody.put("session", "default");
+
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
         try {
-            String url = wahaBaseUrl + "/api/sendText";
-
-            Map<String, Object> body = new HashMap<>();
-            body.put("session", wahaSession);
-            body.put("chatId", chatId);
-            body.put("text", message);
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-
-            HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
-
-            restTemplate.postForObject(url, request, String.class);
-            System.out.println("WhatsApp message sent to " + chatId + " for order " + orderId);
+            restTemplate.postForEntity(url, entity, String.class);
+            System.out.println("Reply sent successfully");
         } catch (Exception e) {
-            System.err.println("Failed to send WhatsApp message: " + e.getMessage());
-            // Do not fail the transaction just because notification failed
+            System.err.println("Error sending WhatsApp message: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
-    private String formatPhoneNumber(String phone) {
-        // 1. Remove non-digits
-        String cleaned = phone.replaceAll("\\D", "");
-
-        // 2. Ensure it starts with 55 (Brazil)
-        // If length is less than or equal to 11 (e.g. 10 or 11 digits), assume missing
-        // country code
-        if (cleaned.length() <= 11) {
-            cleaned = "55" + cleaned;
-        }
-
-        // 3. Handle the "9th digit" rule for Brazil
-        // Format: 55 + AA + 9 + XXXXXXXX (Total 13 digits)
-        // WAHA/WhatsApp legacy IDs often exclude the 9 after the area code.
-        // If we have 13 digits and it's a mobile (starts with 55 + area + 9), remove
-        // the 9.
-        if (cleaned.length() == 13 && cleaned.startsWith("55") && cleaned.charAt(4) == '9') {
-            // Remove the character at index 4 (the '9' after the 2-digit area code)
-            // 55 (0,1) AA (2,3) 9 (4) ...
-            cleaned = cleaned.substring(0, 4) + cleaned.substring(5);
-        }
-
-        return cleaned + "@c.us";
-    }
-
-    private String getMessageForStatus(String status, Long orderId) {
-        String base = "*Urban Burger*: Atualização do Pedido #" + orderId + "\n\n";
-        switch (status) {
-            case "PENDING":
-                return base + "Recebemos seu pedido! Ele está aguardando confirmação.";
-            case "PREPARING":
-                return base + "🍔 Seu pedido está sendo preparado com muito carinho!";
-            case "READY":
-                return base + "✅ Tudo pronto! Seu pedido está aguardando coleta/entregador.";
-            case "IN_DELIVERY":
-                return base + "🛵 Saiu para entrega! Em breve estará com você.";
-            case "COMPLETED":
-                return base + "🎉 Entregue! Bom apetite. Esperamos que goste!";
-            case "CANCELED":
-                return base + "❌ Seu pedido foi cancelado. Entre em contato para mais detalhes.";
-            default:
-                return base + "Status atualizado para: " + status;
-        }
+    public void sendStatusUpdate(String phone, String status, Long orderId) {
+        String message = "Your order #" + orderId + " is now: " + status;
+        String chatId = phone + "@s.whatsapp.net";
+        sendReply(chatId, message);
     }
 }
